@@ -1,0 +1,5 @@
+#timestamp 1:07:35
+
+Using FastAPI 0.116.1 and python version = 3.13.1
+Postman for testing the API w/o needing more frontend development
+Use uvicorn main:app to start the server , add --reload to auto reload on code changes
