@@ -1,4 +1,4 @@
-#timestamp 1:34:21
+#timestamp 4:12:00
 
 Using FastAPI 0.116.1 and python version = 3.13.1
 Postman for testing the API w/o needing more frontend development
@@ -9,3 +9,18 @@ Use uvicorn main:app to start the server , add --reload to auto reload on code c
 pip install "fastapi[standard]"
 or
 pip install -r requirements.txt
+
+DOCUMENTATION
+Available by going to http://127.0.0.1:8000/docs
+
+DATABASE
+using postgres: Freely-Erased7-Headsman
+pgadmin4 GUI
+Using Psycopg 3 to link python to postgres
+    Make sure to properly add libpq to your PATH environment variable
+    https://www.psycopg.org/psycopg3/docs/basic/installation
+
+
+FLOW
+We are following a pydantic model to define how the data should be structured
+This model is followed when using psycopg to interact with the database

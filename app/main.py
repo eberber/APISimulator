@@ -2,9 +2,13 @@ from fastapi import FastAPI, Response, status, HTTPException
 from fastapi.params import Body
 from pydantic import BaseModel #does data validation and settings management using python type annotations
 from random import randrange
+import psycopg #python postgres library to connect to a postgres database
+from psycopg.rows import dict_row  # This is the new location for RealDictRow
+import time
 
 #activate virtual environment in terminal: myenv\Scripts\activate
-#Can use uvicorn main:app to start the server , add --reload to auto reload on code changes
+#Can use uvicorn app.main:app --reload to start the server , --reload to auto reload on code changes
+#firs app is the folder where main is stored, 2nd app is the name of the instance below
 app = FastAPI()
 
 class Post(BaseModel):
@@ -12,6 +16,23 @@ class Post(BaseModel):
     content: str
     published: bool = True
     rating: int | None = None
+
+########################################### DATABASE #########################################################
+while True: #keep trying to connect to database until it works
+    try:
+        conn = psycopg.connect(host='localhost', dbname='APISimulator', user='postgres', password='Freely-Erased7-Headsman', row_factory=dict_row)#
+            # Open a cursor to perform database operations
+        cur = conn.cursor()
+        print("Database connection was successful!")
+        # Query the database and obtain data as Python objects.
+        #cur.execute("SELECT * FROM products;")
+        #print(cur.fetchone())
+        # will print dict of first row in products table
+        break
+    except Exception as error:
+        print("Connecting to database failed")
+        print("Error: ", error)
+        time.sleep(2) #wait 2 seconds before trying to reconnect
 
 # you can use any data structure that can be serialized to JSON
 my_posts = [{"title": "great food spots", "content": "Smittys and Yen Du", "id":"1"}, {"title": "Economy growing weaker", "content": "All under president trumps tariffs", "id":"2"}] #temporary storage, will reset on server restart
@@ -41,7 +62,10 @@ async def root():
 
 @app.get("/posts")
 def get_posts():
-    return {"data": my_posts} #json converts arrays and dicts automatically
+    cur.execute("SELECT * FROM products;")
+    posts = cur.fetchall() #to actually run the query
+    print(posts)
+    return {"data": posts} #json converts arrays and dicts automatically
 
 @app.get("/posts/{id}") #this path parameter is dynamic, can be anything, even if you do sometting like /posts/apple it will still 'work'. order matters
 def get_post(id: int, response:Response): #path parameters are always strings, need to convert to int
