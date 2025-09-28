@@ -19,7 +19,8 @@ pgadmin4 GUI
 Using Psycopg 3 to link python to postgres
     Make sure to properly add libpq to your PATH environment variable
     https://www.psycopg.org/psycopg3/docs/basic/installation
-
+Table Names: if you use capital letters in the names you may run into issues with psycopg! Posts vs posts
+You will have to use "FROM "Posts"" in queries vs just "From posts" or just change the name to lowercase
 
 FLOW
 We are following a pydantic model to define how the data should be structured
