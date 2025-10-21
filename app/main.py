@@ -1,17 +1,23 @@
-from fastapi import FastAPI, Response, status, HTTPException
+from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
 from pydantic import BaseModel #does data validation and settings management using python type annotations
 from random import randrange
 import psycopg #python postgres library to connect to a postgres database
 from psycopg.rows import dict_row  # This is the new location for RealDictRow, instead of tuples, you get dictionaries with column names.
 import time
+from . import models
+from .database import engine, Base, SessionLocal, get_db
+from sqlalchemy.orm import Session
+
+#sqlachemy setup
+models.Base.metadata.create_all(bind=engine) #create the database tables
 
 #activate virtual environment in terminal: myenv\Scripts\activate
 #Can use uvicorn app.main:app --reload to start the server , --reload to auto reload on code changes
 #firs app is the folder where main is stored, 2nd app is the name of the instance below
 app = FastAPI()
 
-class Post(BaseModel):
+class Post(BaseModel): 
     title: str #does not check for string, will try to convert if possible
     content: str
     published: bool = True
@@ -59,6 +65,10 @@ def find_index_post(id: int): #grab index of post by id
 @app.get("/")
 async def root():
     return {"message": "Hello World 2"}
+
+@app.get("/sqlachemy")
+def test_posts(db: Session = Depends(get_db)):
+    return {status: "success"}
 
 @app.get("/posts")
 def get_posts():
