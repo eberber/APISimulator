@@ -1,11 +1,10 @@
 from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
-from pydantic import BaseModel #does data validation and settings management using python type annotations
 from random import randrange
 import psycopg #python postgres library to connect to a postgres database
 from psycopg.rows import dict_row  # This is the new location for RealDictRow, instead of tuples, you get dictionaries with column names.
 import time
-from . import models
+from . import models, schemas
 from .database import engine, Base, SessionLocal, get_db
 from sqlalchemy.orm import Session
 
@@ -17,10 +16,7 @@ models.Base.metadata.create_all(bind=engine) #create the database tables
 #firs app is the folder where main is stored, 2nd app is the name of the instance below
 app = FastAPI()
 
-class Post(BaseModel): 
-    title: str #does not check for string, will try to convert if possible
-    content: str
-    published: bool = True
+
 
 ########################################### DATABASE #########################################################
 while True: #keep trying to connect to database until it works
@@ -86,7 +82,7 @@ def get_post(id: int, response:Response, db: Session = Depends(get_db)): #path p
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED) #201 means something was created, default was 200 and wrong
 #can also use payload : dict = Body(...) if you don't want to create a class
-def create_posts(new_post: Post, db: Session = Depends(get_db)):
+def create_posts(new_post: schemas.PostCreate, db: Session = Depends(get_db)):
     # psycopg example
     # #post_dict = new_post.model_dump() #convert to dictionary for pydantic
     # #using f string leaves you open to sql injection attacks, use %s and a tuple instead
@@ -117,7 +113,7 @@ def delete_post(id:int, db: Session = Depends(get_db)):
     return Response(status_code=status.HTTP_204_NO_CONTENT) #204 means no content, but successful
   
 @app.put("/posts/{id}")
-def update_post(id: int, updated_post: Post, db: Session = Depends(get_db)):
+def update_post(id: int, updated_post: schemas.PostCreate, db: Session = Depends(get_db)):
     # cur.execute("UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *", (updated_post.title, updated_post.content, updated_post.published, id))
     # new_post = cur.fetchone() #if nothing was updated, this will be None
     new_post = db.query(models.Post).filter(models.Post.id == id) #sqlalchemy
