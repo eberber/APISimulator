@@ -7,6 +7,7 @@ import time
 from . import models, schemas
 from .database import engine, Base, SessionLocal, get_db
 from sqlalchemy.orm import Session
+from typing import List #for type hinting lists
 
 #sqlachemy setup
 models.Base.metadata.create_all(bind=engine) #create the database tables
@@ -61,14 +62,14 @@ def find_index_post(id: int): #grab index of post by id
 async def root():
     return {"message": "Hello World 2"}
 
-@app.get("/posts")
+@app.get("/posts", response_model=List[schemas.PostBase]) #response model is a list of PostBase schemas
 def get_posts(db: Session = Depends(get_db)):
     """ cur.execute("SELECT * FROM posts;") #pyscopg example 
     posts = cur.fetchall() #to actually run the query """
     posts= db.query(models.Post).all() #sqlalchemy example
-    return {"data": posts} #json converts arrays and dicts automatically
+    return  posts #json converts arrays and dicts automatically
 
-@app.get("/posts/{id}") #this path parameter is dynamic, can be anything, even if you do sometting like /posts/apple it will still 'work'. order matters
+@app.get("/posts/{id}", response_model=schemas.PostBase) #this path parameter is dynamic, can be anything, even if you do sometting like /posts/apple it will still 'work'. order matters
 def get_post(id: int, response:Response, db: Session = Depends(get_db)): #path parameters are always strings, need to convert to int for data validation!
     # cur.execute("SELECT * FROM posts WHERE id = %s", (id,)) #pscopg: the second argument must always be a sequence , even if it contains a single variable (remember that Python requires a comma , to create a single element tuple)
     # result = cur.fetchone() #get one result
@@ -80,7 +81,7 @@ def get_post(id: int, response:Response, db: Session = Depends(get_db)): #path p
         #return {"message": f"post with id: {id} was not found"}
     return {"post_detail": result}
 
-@app.post("/posts", status_code=status.HTTP_201_CREATED) #201 means something was created, default was 200 and wrong
+@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse) #201 means something was created, default was 200 and wrong
 #can also use payload : dict = Body(...) if you don't want to create a class
 def create_posts(new_post: schemas.PostCreate, db: Session = Depends(get_db)):
     # psycopg example
@@ -97,7 +98,7 @@ def create_posts(new_post: schemas.PostCreate, db: Session = Depends(get_db)):
     db.add(new_post)
     db.commit() #save the changes
     db.refresh(new_post) #get the new post that was just created
-    return {"data": new_post}
+    return  new_post
 
 @app.delete("/posts/{id}")
 def delete_post(id:int, db: Session = Depends(get_db)):
@@ -112,7 +113,7 @@ def delete_post(id:int, db: Session = Depends(get_db)):
     #when deleteing we don;t send back any content, but can use response object to set status code 
     return Response(status_code=status.HTTP_204_NO_CONTENT) #204 means no content, but successful
   
-@app.put("/posts/{id}")
+@app.put("/posts/{id}", response_model=schemas.PostResponse)
 def update_post(id: int, updated_post: schemas.PostCreate, db: Session = Depends(get_db)):
     # cur.execute("UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *", (updated_post.title, updated_post.content, updated_post.published, id))
     # new_post = cur.fetchone() #if nothing was updated, this will be None
@@ -122,4 +123,14 @@ def update_post(id: int, updated_post: schemas.PostCreate, db: Session = Depends
     # conn.commit() #save the changes
     new_post.update(updated_post.model_dump(), synchronize_session=False) 
     db.commit() #save the changes
-    return {"data": new_post.first()}
+    return  new_post.first()
+
+########################################### USER API ROUTE #########################################################
+@app.post("/users", status_code=status.HTTP_201_CREATED, response_model=schemas.UserResponse)
+def create_user(new_user: schemas.UserCreate, db: Session = Depends(get_db)):
+    new_user = models.User(**new_user.model_dump())
+    db.add(new_user)
+    db.commit() #save the changes
+    db.refresh(new_user) 
+
+    return new_user
