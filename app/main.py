@@ -4,10 +4,11 @@ from random import randrange
 import psycopg #python postgres library to connect to a postgres database
 from psycopg.rows import dict_row  # This is the new location for RealDictRow, instead of tuples, you get dictionaries with column names.
 import time
-from . import models, schemas
+from . import models, schemas, utils
 from .database import engine, Base, SessionLocal, get_db
 from sqlalchemy.orm import Session
 from typing import List #for type hinting lists
+
 
 #sqlachemy setup
 models.Base.metadata.create_all(bind=engine) #create the database tables
@@ -128,7 +129,11 @@ def update_post(id: int, updated_post: schemas.PostCreate, db: Session = Depends
 ########################################### USER API ROUTE #########################################################
 @app.post("/users", status_code=status.HTTP_201_CREATED, response_model=schemas.UserResponse)
 def create_user(new_user: schemas.UserCreate, db: Session = Depends(get_db)):
-    new_user = models.User(**new_user.model_dump())
+    #hash the password - user.password
+    hashed_pwd = utils.hash_password(new_user.password)
+    new_user.password = hashed_pwd
+    
+    new_user = models.User(**new_user.model_dump()) #dump pydantic model to dict and unpack into sqlalchemy model
     db.add(new_user)
     db.commit() #save the changes
     db.refresh(new_user) 
