@@ -8,7 +8,7 @@ from . import models, schemas, utils
 from .database import engine, Base, SessionLocal, get_db
 from sqlalchemy.orm import Session
 from typing import List #for type hinting lists
-
+from .routers import post, user
 
 #sqlachemy setup
 models.Base.metadata.create_all(bind=engine) #create the database tables
@@ -53,89 +53,10 @@ def find_index_post(id: int): #grab index of post by id
         if p['id'] == str(id):
             return i
     return None
-
 ############################################ API ROUTES ##########################################################
+app.include_router(post.router) #include the post router
+app.include_router(user.router) #include the user router
 
-#this decorator is what makes this function useful for API calls, where do we land in the page?
-#@FastAPIinstance.httpmethod("path")
-#fastapi will go down this list until it finds a first match, order matters! 
 @app.get("/")
 async def root():
     return {"message": "Hello World 2"}
-
-@app.get("/posts", response_model=List[schemas.PostBase]) #response model is a list of PostBase schemas
-def get_posts(db: Session = Depends(get_db)):
-    """ cur.execute("SELECT * FROM posts;") #pyscopg example 
-    posts = cur.fetchall() #to actually run the query """
-    posts= db.query(models.Post).all() #sqlalchemy example
-    return  posts #json converts arrays and dicts automatically
-
-@app.get("/posts/{id}", response_model=schemas.PostBase) #this path parameter is dynamic, can be anything, even if you do sometting like /posts/apple it will still 'work'. order matters
-def get_post(id: int, response:Response, db: Session = Depends(get_db)): #path parameters are always strings, need to convert to int for data validation!
-    # cur.execute("SELECT * FROM posts WHERE id = %s", (id,)) #pscopg: the second argument must always be a sequence , even if it contains a single variable (remember that Python requires a comma , to create a single element tuple)
-    # result = cur.fetchone() #get one result
-    
-    result = db.query(models.Post).filter(models.Post.id == id).first() #sqlalchemy
-    if not result:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id: {id} was not found") #cleaner way to handle errors
-        #response.status_code = status.HTTP_404_NOT_FOUND #can control status code manually!
-        #return {"message": f"post with id: {id} was not found"}
-    return {"post_detail": result}
-
-@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse) #201 means something was created, default was 200 and wrong
-#can also use payload : dict = Body(...) if you don't want to create a class
-def create_posts(new_post: schemas.PostCreate, db: Session = Depends(get_db)):
-    # psycopg example
-    # #post_dict = new_post.model_dump() #convert to dictionary for pydantic
-    # #using f string leaves you open to sql injection attacks, use %s and a tuple instead
-    # #psycopg will check for sql injection attacks when using %s
-    # cur.execute("""INSERT INTO Posts (title, content, published) VALUES (%s,%s,%s) RETURNING * """, (new_post.title, new_post.content, new_post.published))
-    # new_post = cur.fetchone() #get the new post that was just created
-    # conn.commit() #save the changes 
-
-    #new_post = models.Post(title=new_post.title, content=new_post.content, published=new_post.published) #sqlalchemy example
-    #we can also use dict unpacking if we convert to dictionary first, make sure pydantic model field names match db column names
-    new_post = models.Post(**new_post.model_dump())
-    db.add(new_post)
-    db.commit() #save the changes
-    db.refresh(new_post) #get the new post that was just created
-    return  new_post
-
-@app.delete("/posts/{id}")
-def delete_post(id:int, db: Session = Depends(get_db)):
-    # cur.execute("DELETE FROM posts WHERE id = %s RETURNING *", (id,)) #RETURNING * will return the deleted row
-    # deleted_post = cur.fetchone() #if nothing was deleted, this will be None
-    deleted_post = db.query(models.Post).filter(models.Post.id == id)  #sqlalchemy, this is a query object
-    if deleted_post.first() is None: #first is the actual post object not the query, so we need to call first() to see if it exists
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id: {id} was not found")
-    #conn.commit() #save the changes
-    deleted_post.delete(synchronize_session=False) #synchronize_session=False is for performance, we don't need to sync the session here
-    db.commit()
-    #when deleteing we don;t send back any content, but can use response object to set status code 
-    return Response(status_code=status.HTTP_204_NO_CONTENT) #204 means no content, but successful
-  
-@app.put("/posts/{id}", response_model=schemas.PostResponse)
-def update_post(id: int, updated_post: schemas.PostCreate, db: Session = Depends(get_db)):
-    # cur.execute("UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *", (updated_post.title, updated_post.content, updated_post.published, id))
-    # new_post = cur.fetchone() #if nothing was updated, this will be None
-    new_post = db.query(models.Post).filter(models.Post.id == id) #sqlalchemy
-    if new_post.first() is None: #first is the actual post object not the query, so we need to call first() to see if it exists
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id: {id} was not found")
-    # conn.commit() #save the changes
-    new_post.update(updated_post.model_dump(), synchronize_session=False) 
-    db.commit() #save the changes
-    return  new_post.first()
-
-########################################### USER API ROUTE #########################################################
-@app.post("/users", status_code=status.HTTP_201_CREATED, response_model=schemas.UserResponse)
-def create_user(new_user: schemas.UserCreate, db: Session = Depends(get_db)):
-    #hash the password - user.password
-    hashed_pwd = utils.hash_password(new_user.password)
-    new_user.password = hashed_pwd
-    
-    new_user = models.User(**new_user.model_dump()) #dump pydantic model to dict and unpack into sqlalchemy model
-    db.add(new_user)
-    db.commit() #save the changes
-    db.refresh(new_user) 
-
-    return new_user
