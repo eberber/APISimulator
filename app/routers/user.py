@@ -7,6 +7,7 @@ from typing import List #for type hinting lists
 #cannot use app here since we are in a submodule, need to create a router instance
 router = APIRouter(
     prefix="/users", #all routes in this file will have /users prefix
+    tags=['Users']
 ) 
 
 

@@ -8,7 +8,7 @@ from . import models, schemas, utils
 from .database import engine, Base, SessionLocal, get_db
 from sqlalchemy.orm import Session
 from typing import List #for type hinting lists
-from .routers import post, user
+from .routers import post, user, auth
 
 #sqlachemy setup
 models.Base.metadata.create_all(bind=engine) #create the database tables
@@ -56,6 +56,7 @@ def find_index_post(id: int): #grab index of post by id
 ############################################ API ROUTES ##########################################################
 app.include_router(post.router) #include the post router
 app.include_router(user.router) #include the user router
+app.include_router(auth.router) #include the auth router
 
 @app.get("/")
 async def root():

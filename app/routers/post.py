@@ -6,7 +6,8 @@ from typing import List #for type hinting lists
 
  #cannot use app here since we are in a submodule, need to create a router instance
 router = APIRouter(
-    prefix="/posts" #all routes in this file will have /posts prefix, if empty route then it is just /posts
+    prefix="/posts", #all routes in this file will have /posts prefix, if empty route then it is just /posts
+    tags=['Posts'] #all routes in this file will have 'Posts' tag in the docs at http://127.0.0.1:8000/docs#/
 )
 ############################################ POST API ROUTES ##########################################################
 
